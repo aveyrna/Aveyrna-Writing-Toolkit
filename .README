@@ -1,0 +1,39 @@
+# ✏️ Aveyrna Writing Toolkit
+
+Outil web pour structurer, organiser et gérer des projets narratifs.  
+Conçu pour les auteurs et game designers, avec une approche orientée **story models** et gestion fine des personnages, lieux, chapitres et scènes.
+
+---
+
+## 📄 Présentation
+
+Aveyrna est une application web full-stack permettant :
+- La création et gestion de **projets narratifs**
+- L'organisation en **chapitres, scènes, personnages, lieux**
+- L'utilisation de **modèles narratifs** (Save the Cat, Hero's Journey, etc.)
+- Une **interface moderne** avec Vue 3
+- Un **backend performant** en Go + PostgreSQL
+
+---
+
+## 🏗 Stack technique
+
+### Frontend
+- [Vue 3](https://vuejs.org/)
+- [Vite](https://vitejs.dev/)
+- [Axios](https://axios-http.com/) pour les appels API
+
+### Backend
+- [Go](https://go.dev/) 1.22+
+- [chi](https://github.com/go-chi/chi) pour le routing
+- [pgx](https://github.com/jackc/pgx) pour la connexion PostgreSQL
+- Architecture REST avec routes modulaires
+
+### Base de données
+- [PostgreSQL 16](https://www.postgresql.org/)
+- Hébergée sur [OVH Web Cloud Database](https://www.ovhcloud.com/fr/web-cloud-databases/)
+
+---
+
+## 📜 Licence
+Projet privé – © Aubry Varen
