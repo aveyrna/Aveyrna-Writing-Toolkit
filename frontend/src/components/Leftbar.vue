@@ -1,12 +1,38 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { fetchFullProjectsByUserID } from '../api/projects'
+import { apiMe, apiLogout, getToken } from '../api/auth'
+import AuthModal from './AuthModal.vue'
+
+const show = ref(false)
+const user = ref(null)
+
+async function bootstrapAuth() {
+    if (getToken()) {
+        user.value = await apiMe()
+    }
+}
+
+function onAuth(data) {
+    user.value = {
+        username: data.username,
+        email: data.email,
+        id: data.id
+    }
+    console.log('Utilisateur connecté/inscrit:', data)
+}
+
+async function onLogout() {
+    await apiLogout()
+    user.value = null
+}
 
 // const userID = "98eb1055-8325-4549-a27a-3d088e9a9eb4"
 const userID = 1
 const projects = ref([])
 
 onMounted(async () => {
+    await bootstrapAuth()
     try {
         projects.value = await fetchFullProjectsByUserID(userID)
         console.log("✅ Projets complets chargés :", projects.value)
@@ -19,10 +45,20 @@ onMounted(async () => {
 
 <template>
     <nav class="left-nav">
-        <a href="/"><img src="/img/logo_aveyrna.png"
-                class="dashboard-logo" /></a>
+        <a href="/"><img src="/img/logo_aveyrna.png" class="dashboard-logo" /></a>
         <h1>Aveyrna</h1>
         <p class="desc">Writing Toolkit</p>
+        <div>
+            <template v-if="user">
+                <p>Bonjour <strong>{{ user.username }}</strong></p>
+                <button @click="onLogout">Se déconnecter</button>
+            </template>
+            <template v-else>
+                <button @click="show = true">Se connecter / S'inscrire</button>
+            </template>
+
+            <AuthModal v-model="show" @success="onAuth" />
+        </div>
         <ul>
             <li>
                 <details>
@@ -86,7 +122,8 @@ onMounted(async () => {
                                             <summary class="locations-summary">LOCATIONS</summary>
                                             <ul>
                                                 <!-- List story locations -->
-                                                 <p style="font-size: 1.1em; color: lightgreen; font-style: italic;">+ Add a
+                                                <p style="font-size: 1.1em; color: lightgreen; font-style: italic;">+
+                                                    Add a
                                                     location</p>
                                                 <hr />
                                                 <li v-for="location in story.locations" :key="location.id"
@@ -101,7 +138,9 @@ onMounted(async () => {
                                             <summary class="factions-summary">FACTIONS</summary>
                                             <ul>
                                                 <!-- List story factions -->
-                                                 <p style="font-size: 1.1em; color: rgb(255, 248, 155); font-style: italic;">+ Add a
+                                                <p
+                                                    style="font-size: 1.1em; color: rgb(255, 248, 155); font-style: italic;">
+                                                    + Add a
                                                     faction</p>
                                                 <hr />
                                                 <li v-for="faction in story.factions" :key="faction.id"

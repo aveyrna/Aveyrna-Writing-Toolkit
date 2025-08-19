@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"backend/routes/auth"
 	"backend/routes/characters"
 	"backend/routes/projects"
 
@@ -47,6 +48,7 @@ func Router() *chi.Mux {
 	r.Route("/api", func(api chi.Router) {
 		api.Mount("/projects", projects.Routes())
 		api.Mount("/characters", characters.Routes())
+		api.Mount("/auth", auth.Routes())
 	})
 
 	return r
