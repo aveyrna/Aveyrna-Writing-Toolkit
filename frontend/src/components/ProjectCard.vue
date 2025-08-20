@@ -13,7 +13,7 @@ import StoryModelBlock from './StoryModelBlock.vue'
     <p class="project-description">{{ project.project.description }}</p>
 
     <div class="mt-4 space-y-4">
-      <StoryModelBlock :model="project.story_model" />
+      <StoryModelBlock :model="project.project" />
       <ChapterBlock :chapters="project.chapters" :scenes="project.scenes" />
       <CharacterBlock :characters="project.characters" />
       <LocationBlock :locations="project.locations" />
@@ -34,5 +34,6 @@ import StoryModelBlock from './StoryModelBlock.vue'
 .project-description {
   font-size: 1.25rem;
   font-weight: bold;
+  margin-top: -25px;
 }
 </style>
