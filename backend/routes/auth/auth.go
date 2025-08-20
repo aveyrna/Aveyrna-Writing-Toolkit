@@ -4,6 +4,7 @@ package auth
 import (
 	"context"
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -43,7 +44,7 @@ func Routes() *chi.Mux {
 	return r
 }
 
-// ---- Token HMAC très simple (dev)
+// ---- Token HMAC simple (legacy, pour compatibilité)
 func secret() []byte {
 	s := os.Getenv("AUTH_SECRET")
 	if s == "" {
@@ -52,7 +53,6 @@ func secret() []byte {
 	return []byte(s)
 }
 
-// on encode: publicUUID|email|unixTs + signature HMAC, puis base64url
 func makeToken(u models.User) (string, error) {
 	payload := fmt.Sprintf("%s|%s|%d", u.PublicID.String(), u.Email, time.Now().Unix())
 	h := hmac.New(sha256.New, secret())
@@ -80,7 +80,6 @@ func parseToken(tok string) (publicID string, email string, err error) {
 	if !hmac.Equal(h.Sum(nil), sigGiven) {
 		return "", "", errors.New("invalid token signature")
 	}
-	// payload: publicUUID|email|ts
 	var ts int64
 	if _, err := fmt.Sscanf(payload, "%s|%s|%d", &publicID, &email, &ts); err != nil {
 		return "", "", errors.New("invalid token payload")
@@ -88,8 +87,31 @@ func parseToken(tok string) (publicID string, email string, err error) {
 	return publicID, email, nil
 }
 
+// ---- Helpers sessions opaques
+func randomToken(n int) (string, error) {
+	b := make([]byte, n)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(b), nil
+}
+func sha256b64(s string) string {
+	sum := sha256.Sum256([]byte(s))
+	return base64.RawURLEncoding.EncodeToString(sum[:])
+}
+func isProd() bool {
+	v := strings.ToLower(os.Getenv("APP_ENV"))
+	return v == "prod" || v == "production"
+}
+
+// func cookieSettings() (secure bool, sameSite http.SameSite) {
+// 	if isProd() {
+// 		return true, http.SameSiteNoneMode
+// 	}
+// 	return false, http.SameSiteNoneMode // en dev: pas de Secure, None car ports différents
+// }
+
 func logoutUser(w http.ResponseWriter, r *http.Request) {
-	// Si un cookie HttpOnly est utilisé dans une autre conf, on le “supprime” proprement.
 	http.SetCookie(w, &http.Cookie{
 		Name:     "auth",
 		Value:    "",
@@ -100,7 +122,7 @@ func logoutUser(w http.ResponseWriter, r *http.Request) {
 		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 	})
-	w.WriteHeader(http.StatusNoContent) // 204
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func registerUser(w http.ResponseWriter, r *http.Request) {
@@ -115,8 +137,6 @@ func registerUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	println("Trying to register:  ", body.Username)
-
 	hash, err := bcrypt.GenerateFromPassword([]byte(body.Password), bcrypt.DefaultCost)
 	if err != nil {
 		http.Error(w, "hash error", http.StatusInternalServerError)
@@ -124,7 +144,6 @@ func registerUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var u models.User
-	// On retourne les champs publics (id = public_id via json tags)
 	err = db.Pool.QueryRow(ctx, `
 		INSERT INTO users (username, email, password_hash)
 		VALUES ($1, $2, $3)
@@ -168,6 +187,43 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 1) Crée un token de session
+	sessionTok, err := randomToken(32)
+	if err != nil {
+		http.Error(w, "token error", 500)
+		return
+	}
+	tokHash := sha256b64(sessionTok)
+
+	var expiresAt time.Time
+	err = db.Pool.QueryRow(ctx, `
+		INSERT INTO sessions (user_id, token_hash, expires_at)
+		VALUES ($1, $2, now() + interval '30 days')
+		RETURNING expires_at`, u.ID, tokHash).Scan(&expiresAt)
+	if err != nil {
+		http.Error(w, "session error", 500)
+		return
+	}
+
+	// 2) Pose le cookie
+	// secure, sameSite := cookieSettings()
+
+	const sessionDays = 30
+	dur := time.Hour * 24 * sessionDays
+	exp := time.Now().Add(dur)
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "auth",
+		Value:    sessionTok,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false,                // isProd(), // en dev: pas de Secure, None car ports différents
+		SameSite: http.SameSiteLaxMode, // http.SameSiteNoneMode,
+		Expires:  exp,
+		MaxAge:   int(dur.Seconds()),
+	})
+
+	// 3) Réponse JSON (compatibilité avec ton front actuel)
 	tok, _ := makeToken(u)
 	writeJSON(w, authResponse{
 		ID:       u.PublicID.String(),
@@ -178,28 +234,42 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func me(w http.ResponseWriter, r *http.Request) {
+	var token string
+
+	// 1. Tente via Header
 	authz := r.Header.Get("Authorization")
-	if authz == "" || !strings.HasPrefix(authz, "Bearer ") {
-		http.Error(w, "missing bearer", http.StatusUnauthorized)
+	if strings.HasPrefix(authz, "Bearer ") {
+		token = strings.TrimPrefix(authz, "Bearer ")
+	}
+
+	// 2. Sinon, tente via cookie
+	if token == "" {
+		if c, err := r.Cookie("auth"); err == nil {
+			token = c.Value
+		}
+	}
+
+	if token == "" {
+		http.Error(w, "missing token", http.StatusUnauthorized)
 		return
 	}
-	publicID, email, err := parseToken(strings.TrimPrefix(authz, "Bearer "))
+
+	publicID, email, err := parseToken(token)
 	if err != nil {
 		http.Error(w, "invalid token", http.StatusUnauthorized)
 		return
 	}
 
+	// Suite identique
 	var u models.User
 	if err := db.Pool.QueryRow(context.Background(), `
 		SELECT id, public_id, username, email, created_at, updated_at
-		FROM users WHERE public_id = $1 AND email = $2`,
-		publicID, email,
+		FROM users WHERE public_id = $1 AND email = $2`, publicID, email,
 	).Scan(&u.ID, &u.PublicID, &u.Username, &u.Email, &u.CreatedAt, &u.UpdatedAt); err != nil {
 		http.Error(w, "user not found", http.StatusUnauthorized)
 		return
 	}
 
-	// On renvoie directement ton modèle: ID interne et Password sont masqués par les tags json
 	writeJSON(w, u)
 }
 

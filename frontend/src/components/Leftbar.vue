@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { fetchFullProjectsByUserID } from '../api/projects'
-import { apiMe, apiLogout, getToken } from '../api/auth'
+import { me, logout, getToken } from '../api/auth'
 import AuthModal from './AuthModal.vue'
 
 const show = ref(false)
@@ -9,7 +9,7 @@ const user = ref(null)
 
 async function bootstrapAuth() {
     if (getToken()) {
-        user.value = await apiMe()
+        user.value = await me()
     }
 }
 
@@ -23,7 +23,7 @@ function onAuth(data) {
 }
 
 async function onLogout() {
-    await apiLogout()
+    await logout()
     user.value = null
 }
 

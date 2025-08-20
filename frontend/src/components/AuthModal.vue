@@ -1,6 +1,6 @@
 <script setup>
 import { ref, watch } from 'vue'
-import { apiLogin, apiRegister } from '../api/auth'
+import { login, register } from '../api/auth'
 
 const props = defineProps({ modelValue: { type: Boolean, default: false } })
 const emit = defineEmits(['update:modelValue', 'success'])
@@ -19,8 +19,8 @@ async function onSubmit() {
     error.value = ''; success.value = ''
     try {
         const data = mode.value === 'login'
-            ? await apiLogin({ email: form.value.email, password: form.value.password })
-            : await apiRegister({ username: form.value.username, email: form.value.email, password: form.value.password })
+            ? await login({ email: form.value.email, password: form.value.password })
+            : await register({ username: form.value.username, email: form.value.email, password: form.value.password })
         emit('success', data)
         close()
     } catch (e) { error.value = e.message || 'Erreur' }
