@@ -28,13 +28,14 @@ async function onLogout() {
 }
 
 // const userID = "98eb1055-8325-4549-a27a-3d088e9a9eb4"
-const userID = 1
+const userID = 6
 const projects = ref([])
 
 onMounted(async () => {
     await bootstrapAuth()
     try {
         projects.value = await fetchFullProjectsByUserID(userID)
+        projects.value = Array.isArray(projects.value) ? projects.value : []
         console.log("✅ Projets complets chargés :", projects.value)
         console.log("titre du premier projet :", projects.value[0]?.project.title)
     } catch (err) {

@@ -6,16 +6,17 @@ import ProjectCard from '../components/ProjectCard.vue'
 import { fetchFullProjectsByUserID } from '../api/projects'
 
 
-const userID = 1
+const userID = 6
 const projects = ref([])
 
 onMounted(async () => {
-    try {
-        projects.value = await fetchFullProjectsByUserID(userID)
-        console.log("✅ Projets complets chargés dans dashboard :", projects.value)
-    } catch (err) {
-        console.error("❌ Erreur chargement projets :", err)
-    }
+  try {
+    projects.value = await fetchFullProjectsByUserID(userID)
+    projects.value = Array.isArray(projects.value) ? projects.value : []
+    console.log("✅ Projets complets chargés dans dashboard :", projects.value)
+  } catch (err) {
+    console.error("❌ Erreur chargement projets :", err)
+  }
 })
 </script>
 
