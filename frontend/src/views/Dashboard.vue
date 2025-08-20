@@ -6,7 +6,7 @@ import ProjectCard from '../components/ProjectCard.vue'
 import { fetchFullProjectsByUserID } from '../api/projects'
 
 
-const userID = 6
+const userID = 1
 const projects = ref([])
 
 onMounted(async () => {
