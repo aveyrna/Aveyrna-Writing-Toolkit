@@ -362,9 +362,20 @@ func getFullProjectsByUser(w http.ResponseWriter, r *http.Request) {
 	userID := chi.URLParam(r, "userID")
 	fmt.Println("🔍 Chargement projets complets pour userID:", userID)
 
+	var userDbId int
+	err := db.Pool.QueryRow(ctx,
+		`SELECT id FROM users WHERE public_id = $1`, userID).Scan(&userDbId)
+	if err != nil {
+		http.Error(w, "User not found", 404)
+		fmt.Println("❌ User not found:", err)
+		return
+	}
+
+	fmt.Println("✅ User found, DB ID =", userDbId)
+
 	rows, err := db.Pool.Query(ctx,
 		`SELECT id, public_id, user_id, title, description, story_model_id, created_at
-		 FROM projects WHERE user_id = $1`, userID)
+		 FROM projects WHERE user_id = $1`, userDbId)
 	if err != nil {
 		http.Error(w, "DB error", 500)
 		fmt.Println("❌ DB error:", err)
