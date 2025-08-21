@@ -234,43 +234,47 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func me(w http.ResponseWriter, r *http.Request) {
-	var token string
+	ctx := context.Background()
 
-	// 1. Tente via Header
-	authz := r.Header.Get("Authorization")
-	if strings.HasPrefix(authz, "Bearer ") {
-		token = strings.TrimPrefix(authz, "Bearer ")
+	// 1) Tentative via cookie de session opaque
+	if c, err := r.Cookie("auth"); err == nil && c.Value != "" {
+		tokHash := sha256b64(c.Value)
+
+		var u models.User
+		err := db.Pool.QueryRow(ctx, `
+			SELECT u.id, u.public_id, u.username, u.email, u.created_at, u.updated_at
+			FROM sessions s
+			JOIN users u ON u.id = s.user_id
+			WHERE s.token_hash = $1 AND s.expires_at > now()
+			LIMIT 1
+		`, tokHash).Scan(&u.ID, &u.PublicID, &u.Username, &u.Email, &u.CreatedAt, &u.UpdatedAt)
+
+		if err == nil {
+			writeJSON(w, u)
+			return
+		}
+		// sinon on tente le fallback legacy
 	}
 
-	// 2. Sinon, tente via cookie
-	if token == "" {
-		if c, err := r.Cookie("auth"); err == nil {
-			token = c.Value
+	// 2) Fallback legacy: Authorization: Bearer <token HMAC>
+	authz := r.Header.Get("Authorization")
+	if strings.HasPrefix(authz, "Bearer ") {
+		token := strings.TrimPrefix(authz, "Bearer ")
+		publicID, email, err := parseToken(token)
+		if err == nil {
+			var u models.User
+			if err := db.Pool.QueryRow(ctx, `
+				SELECT id, public_id, username, email, created_at, updated_at
+				FROM users
+				WHERE public_id = $1 AND email = $2
+			`, publicID, email).Scan(&u.ID, &u.PublicID, &u.Username, &u.Email, &u.CreatedAt, &u.UpdatedAt); err == nil {
+				writeJSON(w, u)
+				return
+			}
 		}
 	}
 
-	if token == "" {
-		http.Error(w, "missing token", http.StatusUnauthorized)
-		return
-	}
-
-	publicID, email, err := parseToken(token)
-	if err != nil {
-		http.Error(w, "invalid token", http.StatusUnauthorized)
-		return
-	}
-
-	// Suite identique
-	var u models.User
-	if err := db.Pool.QueryRow(context.Background(), `
-		SELECT id, public_id, username, email, created_at, updated_at
-		FROM users WHERE public_id = $1 AND email = $2`, publicID, email,
-	).Scan(&u.ID, &u.PublicID, &u.Username, &u.Email, &u.CreatedAt, &u.UpdatedAt); err != nil {
-		http.Error(w, "user not found", http.StatusUnauthorized)
-		return
-	}
-
-	writeJSON(w, u)
+	http.Error(w, "unauthorized", http.StatusUnauthorized)
 }
 
 func writeJSON(w http.ResponseWriter, v any) {

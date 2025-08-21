@@ -8,8 +8,10 @@ const show = ref(false)
 const user = ref(null)
 
 async function bootstrapAuth() {
-    if (getToken()) {
-        user.value = await me()
+    try {
+        user.value = await me()      // tente toujours
+    } catch (e) {
+        user.value = null            // silencieux si 401
     }
 }
 
