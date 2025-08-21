@@ -4,13 +4,17 @@ import Leftbar from '../components/Leftbar.vue';
 import { ref, onMounted } from 'vue'
 import ProjectCard from '../components/ProjectCard.vue'
 import { fetchFullProjectsByUserID } from '../api/projects'
+import { me } from '../api/auth'
 
 
-const userID = 1
 const projects = ref([])
+const user = ref(null)
 
 onMounted(async () => {
   try {
+    user.value = await me()
+    console.log("✅ Utilisateur connecté :", user.value)
+    const userID = user.value.id
     projects.value = await fetchFullProjectsByUserID(userID)
     projects.value = Array.isArray(projects.value) ? projects.value : []
     console.log("✅ Projets complets chargés dans dashboard :", projects.value)
@@ -31,6 +35,7 @@ onMounted(async () => {
         </div>
         <div v-else>
           <p>Aucun projet trouvé.</p>
+          <p style="text-align: left;"><-- Connectez vous pour voir vos projets ou en créer un nouveau.</p>
         </div>
       </div>
     </div>

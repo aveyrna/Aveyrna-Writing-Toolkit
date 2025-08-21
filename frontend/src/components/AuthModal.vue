@@ -23,6 +23,7 @@ async function onSubmit() {
             : await register({ username: form.value.username, email: form.value.email, password: form.value.password })
         emit('success', data)
         close()
+        window.location.reload() // Reload to update user state
     } catch (e) { error.value = e.message || 'Erreur' }
 }
 </script>

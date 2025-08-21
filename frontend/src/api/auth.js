@@ -88,4 +88,5 @@ export async function logout() {
     } finally {
         setToken(null);
     }
+    window.location.reload(); // Recharger pour mettre à jour l'état utilisateur
 }
