@@ -99,17 +99,6 @@ func sha256b64(s string) string {
 	sum := sha256.Sum256([]byte(s))
 	return base64.RawURLEncoding.EncodeToString(sum[:])
 }
-func isProd() bool {
-	v := strings.ToLower(os.Getenv("APP_ENV"))
-	return v == "prod" || v == "production"
-}
-
-// func cookieSettings() (secure bool, sameSite http.SameSite) {
-// 	if isProd() {
-// 		return true, http.SameSiteNoneMode
-// 	}
-// 	return false, http.SameSiteNoneMode // en dev: pas de Secure, None car ports différents
-// }
 
 func logoutUser(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
@@ -206,8 +195,6 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 2) Pose le cookie
-	// secure, sameSite := cookieSettings()
-
 	const sessionDays = 30
 	dur := time.Hour * 24 * sessionDays
 	exp := time.Now().Add(dur)
@@ -217,7 +204,7 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 		Value:    sessionTok,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   false,                // isProd(), // en dev: pas de Secure, None car ports différents
+		Secure:   false,                // en dev: pas de Secure
 		SameSite: http.SameSiteLaxMode, // http.SameSiteNoneMode,
 		Expires:  exp,
 		MaxAge:   int(dur.Seconds()),
