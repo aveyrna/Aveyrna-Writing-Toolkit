@@ -14,7 +14,7 @@ import StoryModelBlock from './StoryModelBlock.vue'
 
     <div class="mt-4 space-y-4">
       <StoryModelBlock :model="project.project || []" />
-      <ChapterBlock :chapters="project.chapters" :scenes="project.scenes || []" />
+      <ChapterBlock :chapters="project.chapters || []" :scenes="project.scenes || []" />
       <CharacterBlock :characters="project.characters || []" />
       <LocationBlock :locations="project.locations || []" />
       <FactionBlock :factions="project.factions || []" />

@@ -168,6 +168,16 @@ function onCreated(project) {
                                             </ul>
                                         </details>
                                     </li>
+                                    <li>
+                                        <details>
+                                            <summary class="danger-summary">Danger Zone</summary>
+                                            <ul>
+                                                <li>
+                                                    <button class="danger-item" @click="deleteStory(story.id)">&#9888; Delete Story</button>
+                                                </li>
+                                            </ul>
+                                        </details>
+                                    </li>
                                 </ul>
                             </details>
                         </li>
@@ -323,5 +333,21 @@ hr {
 .factions-item {
     color: rgb(255, 248, 155);
     padding-left: 25px;
+}
+
+.danger-summary {
+    font-weight: bold;
+    color: rgb(255, 0, 0);
+    background: rgba(255, 0, 0, 0.1);
+    text-align: left;
+    margin-top: 50px;
+    margin-left: 5px;
+}
+
+.danger-item {
+    color: rgb(255, 0, 0);
+    padding-left: 25px;
+    width: 70%;
+    margin-left: 15%;
 }
 </style>

@@ -2,14 +2,14 @@
 import ChapterCard from './ChapterCard.vue'
 
 defineProps({
-  chapters: Array,
-  scenes: Array
+  chapters: { type: Array, default: () => [] },
+  scenes: { type: Array, default: () => [] }
 })
 </script>
 
 <template>
   <div class="chapter-block">
-    <h2 class="block-title">Chapitres</h2>
+    <h2 class="block-title">Chapitres ({{ chapters.length }})</h2>
     <div class="scroll-row">
       <ChapterCard v-for="chapter in chapters" :key="chapter.id" :chapter="chapter" :scenes="scenes" />
     </div>

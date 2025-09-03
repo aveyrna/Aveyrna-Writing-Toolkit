@@ -97,26 +97,6 @@ func getProjectByID(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(p)
 }
 
-// func createProject(w http.ResponseWriter, r *http.Request) {
-// 	var p models.Project
-// 	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
-// 		http.Error(w, err.Error(), 400)
-// 		return
-// 	}
-
-// 	err := db.Pool.QueryRow(context.Background(),
-// 		`INSERT INTO projects (user_id, title, description, story_model_id)
-// 		 VALUES ($1, $2, $3, $4) RETURNING id, created_at`,
-// 		p.UserID, p.Title, p.Description, p.StoryModelID).
-// 		Scan(&p.ID, &p.CreatedAt)
-// 	if err != nil {
-// 		http.Error(w, err.Error(), 500)
-// 		return
-// 	}
-
-// 	json.NewEncoder(w).Encode(p)
-// }
-
 func createProject(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 
