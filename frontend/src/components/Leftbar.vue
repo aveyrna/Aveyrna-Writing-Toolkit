@@ -92,7 +92,7 @@ function onCreated(project) {
                         <button v-if="user" @click="modalOpen = true">+ Add a story</button>
 
                         <!-- modale -->
-                        <NewProjectModal v-model="modalOpen" @created="onCreated" />
+                        <NewProjectModal v-if="user" v-model="modalOpen" @created="onCreated" />
 
                         <li v-for="story in projects" :key="story.id">
                             <hr />
