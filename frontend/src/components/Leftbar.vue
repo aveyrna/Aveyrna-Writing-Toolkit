@@ -89,7 +89,7 @@ function onCreated(project) {
                     <ul>
                         <!-- Bouton pour ouvrir la modale -->
                         <!-- bouton -->
-                        <button @click="modalOpen = true">+ Add a story</button>
+                        <button v-if="user" @click="modalOpen = true">+ Add a story</button>
 
                         <!-- modale -->
                         <NewProjectModal v-model="modalOpen" @created="onCreated" />
