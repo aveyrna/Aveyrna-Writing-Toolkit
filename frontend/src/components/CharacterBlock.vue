@@ -1,5 +1,5 @@
 <script setup>
-defineProps({ characters: Array })
+defineProps({ characters: { type: Array, default: () => [] } })
 import CharacterCard from './CharacterCard.vue'
 </script>
 

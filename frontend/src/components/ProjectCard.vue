@@ -13,11 +13,11 @@ import StoryModelBlock from './StoryModelBlock.vue'
     <p class="project-description">{{ project.project.description }}</p>
 
     <div class="mt-4 space-y-4">
-      <StoryModelBlock :model="project.project" />
-      <ChapterBlock :chapters="project.chapters" :scenes="project.scenes" />
-      <CharacterBlock :characters="project.characters" />
-      <LocationBlock :locations="project.locations" />
-      <FactionBlock :factions="project.factions" />
+      <StoryModelBlock :model="project.project || []" />
+      <ChapterBlock :chapters="project.chapters" :scenes="project.scenes || []" />
+      <CharacterBlock :characters="project.characters || []" />
+      <LocationBlock :locations="project.locations || []" />
+      <FactionBlock :factions="project.factions || []" />
     </div>
   </div>
 </template>
