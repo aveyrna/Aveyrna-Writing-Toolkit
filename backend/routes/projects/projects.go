@@ -2,10 +2,14 @@ package projects
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
+	"time"
 
 	"backend/db"
 	"backend/models"
@@ -93,24 +97,91 @@ func getProjectByID(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(p)
 }
 
+// func createProject(w http.ResponseWriter, r *http.Request) {
+// 	var p models.Project
+// 	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+// 		http.Error(w, err.Error(), 400)
+// 		return
+// 	}
+
+// 	err := db.Pool.QueryRow(context.Background(),
+// 		`INSERT INTO projects (user_id, title, description, story_model_id)
+// 		 VALUES ($1, $2, $3, $4) RETURNING id, created_at`,
+// 		p.UserID, p.Title, p.Description, p.StoryModelID).
+// 		Scan(&p.ID, &p.CreatedAt)
+// 	if err != nil {
+// 		http.Error(w, err.Error(), 500)
+// 		return
+// 	}
+
+// 	json.NewEncoder(w).Encode(p)
+// }
+
 func createProject(w http.ResponseWriter, r *http.Request) {
-	var p models.Project
-	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
-		http.Error(w, err.Error(), 400)
+	ctx := context.Background()
+
+	// 1) Récupère l'utilisateur depuis la session (cookie "auth")
+	c, err := r.Cookie("auth")
+	if err != nil || c.Value == "" {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	// hash du token comme dans /auth
+	sum := sha256.Sum256([]byte(c.Value))
+	tokHash := base64.RawURLEncoding.EncodeToString(sum[:])
+
+	var userID int64
+	if err := db.Pool.QueryRow(ctx, `
+		SELECT u.id
+		FROM sessions s
+		JOIN users u ON u.id = s.user_id
+		WHERE s.token_hash = $1 AND s.expires_at > now()
+		LIMIT 1
+	`, tokHash).Scan(&userID); err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	err := db.Pool.QueryRow(context.Background(),
-		`INSERT INTO projects (user_id, title, description, story_model_id)
-		 VALUES ($1, $2, $3, $4) RETURNING id, created_at`,
-		p.UserID, p.Title, p.Description, p.StoryModelID).
-		Scan(&p.ID, &p.CreatedAt)
+	// 2) Decode payload minimal (NE PREND PAS user_id du client)
+	var body struct {
+		Title        string `json:"title"`
+		Description  string `json:"description"`
+		StoryModelID *int64 `json:"story_model_id,omitempty"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "bad json", http.StatusBadRequest)
+		return
+	}
+	if strings.TrimSpace(body.Title) == "" {
+		http.Error(w, "title requis", http.StatusBadRequest)
+		return
+	}
+
+	// 3) Insert côté DB en générant public_id
+	var p struct {
+		ID           int64     `json:"id"`
+		PublicID     uuid.UUID `json:"public_id"`
+		UserID       int64     `json:"user_id"`
+		Title        string    `json:"title"`
+		Description  string    `json:"description"`
+		StoryModelID *int64    `json:"story_model_id,omitempty"`
+		CreatedAt    time.Time `json:"created_at"`
+	}
+	err = db.Pool.QueryRow(ctx, `
+		INSERT INTO projects (public_id, user_id, title, description, story_model_id, created_at)
+		VALUES (gen_random_uuid(), $1, $2, COALESCE($3,''), $4, now())
+		RETURNING id, public_id, user_id, title, description, story_model_id, created_at
+	`, userID, body.Title, body.Description, body.StoryModelID).
+		Scan(&p.ID, &p.PublicID, &p.UserID, &p.Title, &p.Description, &p.StoryModelID, &p.CreatedAt)
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		http.Error(w, "db error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	json.NewEncoder(w).Encode(p)
+	// 4) Réponse
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	_ = json.NewEncoder(w).Encode(p)
 }
 
 func updateProject(w http.ResponseWriter, r *http.Request) {

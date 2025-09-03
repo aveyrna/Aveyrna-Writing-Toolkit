@@ -23,3 +23,27 @@ export async function fetchFullProjectsByUserID(userID) {
   }
   return res.json()
 }
+
+export async function createProject({ title, description = '', story_model_id = null }) {
+  try {
+    const res = await fetch(`/api/projects`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      // Pas de user_id ici : il est déduit du cookie côté serveur
+      body: JSON.stringify({ title, description, story_model_id }),
+    })
+
+    const text = await res.text()
+    console.log("↪ Réponse brute (createProject):", text)
+
+    if (!res.ok) {
+      throw new Error(`Erreur ${res.status} : ${res.statusText} → ${text}`)
+    }
+
+    return JSON.parse(text) // { id, public_id, user_id, title, description, story_model_id, created_at }
+  } catch (err) {
+    console.error("⚠️ Erreur dans createProject:", err)
+    throw err
+  }
+}
+
