@@ -1,9 +1,9 @@
 <script setup>
 import { onMounted, ref } from 'vue'
-import { fetchFullProjectsByUserID } from '../api/projects'
+import { fetchFullProjectsByUserID, deleteProjectByUUID } from '../api/projects'
 import { me, logout } from '../api/auth'
 import AuthModal from './AuthModal.vue'
-import NewProjectModal from './NewProjectModal.vue'   // <-- ajout
+import NewProjectModal from './NewProjectModal.vue'
 
 const show = ref(false)
 const user = ref(null)
@@ -20,6 +20,24 @@ async function bootstrapAuth() {
     } catch (e) {
         user.value = null
     }
+}
+
+async function deleteStory(uuid) {
+  if (!uuid) return alert("UUID introuvable.")
+
+  const proj = projects.value.find(p => p.project.id === uuid) // chez toi, id === UUID
+  const name = proj?.project?.title || uuid
+  if (!confirm(`Supprimer “${name}” ? Cette action est irréversible.`)) return
+
+  try {
+    await deleteProjectByUUID(uuid)              // ← on utilise TA fonction telle quelle
+    // retire localement la story supprimée
+    projects.value = projects.value.filter(p => p.project.id !== uuid)
+    console.log('✅ Projet supprimé :', uuid)
+  } catch (e) {
+    console.error('❌ Suppression échouée :', e)
+    alert(e.message || 'Erreur serveur')
+  }
 }
 
 function onAuth(data) {
@@ -173,7 +191,7 @@ function onCreated(project) {
                                             <summary class="danger-summary">Danger Zone</summary>
                                             <ul>
                                                 <li>
-                                                    <button class="danger-item" @click="deleteStory(story.id)">&#9888; Delete Story</button>
+                                                    <button class="danger-item" @click="deleteStory(story.project.id)">&#9888; Delete Story</button>
                                                 </li>
                                             </ul>
                                         </details>

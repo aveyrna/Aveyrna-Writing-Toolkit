@@ -1,3 +1,17 @@
+export async function deleteProjectByUUID(uuid) {
+  const res = await fetch(`/api/projects/public/${uuid}`, { method: 'DELETE' })
+  const text = await res.text()
+  console.log("↪ Réponse brute (deleteProjectByUUID):", text)
+
+  if (!res.ok) {
+    throw new Error(`Erreur ${res.status} : ${res.statusText} → ${text}`)
+  }
+
+  // 204 attendu → pas de body
+  return {}
+}
+
+
 export async function fetchFullProjectByUUID(uuid) {
   try {
     const res = await fetch(`/api/projects/public/${uuid}/full`)

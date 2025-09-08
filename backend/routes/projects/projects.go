@@ -26,12 +26,61 @@ func Routes() *chi.Mux {
 	r.Post("/", createProject)
 	r.Get("/{id}", getProjectByID)
 	r.Put("/{id}", updateProject)
-	r.Delete("/{id}", deleteProject)
+	r.Delete("/public/{uuid}", deleteProjectByUUID)
 	r.Get("/{id}/full", getFullProject)
 	r.Get("/public/{uuid}/full", getFullProjectByUUID)
 	r.Get("/user/{userID}/full", getFullProjectsByUser)
 
 	return r
+}
+
+func deleteProjectByUUID(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+
+	// 1) Auth via cookie "auth" (même logique que createProject)
+	c, err := r.Cookie("auth")
+	if err != nil || c.Value == "" {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	sum := sha256.Sum256([]byte(c.Value))
+	tokHash := base64.RawURLEncoding.EncodeToString(sum[:])
+
+	var userID int64
+	if err := db.Pool.QueryRow(ctx, `
+		SELECT u.id
+		FROM sessions s
+		JOIN users u ON u.id = s.user_id
+		WHERE s.token_hash = $1 AND s.expires_at > now()
+		LIMIT 1
+	`, tokHash).Scan(&userID); err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// 2) Parse UUID
+	uuidStr := chi.URLParam(r, "uuid")
+	pub, err := uuid.Parse(uuidStr)
+	if err != nil {
+		http.Error(w, "invalid uuid", http.StatusBadRequest)
+		return
+	}
+
+	// 3) Delete scoping: seulement le propriétaire peut supprimer
+	tag, err := db.Pool.Exec(ctx, `
+		DELETE FROM projects
+		WHERE public_id = $1 AND user_id = $2
+	`, pub, userID)
+	if err != nil {
+		http.Error(w, "db error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func getAllProjects(w http.ResponseWriter, r *http.Request) {
@@ -175,18 +224,6 @@ func updateProject(w http.ResponseWriter, r *http.Request) {
 	_, err := db.Pool.Exec(context.Background(),
 		`UPDATE projects SET title = $1, description = $2, story_model_id = $3 WHERE id = $4`,
 		p.Title, p.Description, p.StoryModelID, id)
-	if err != nil {
-		http.Error(w, err.Error(), 500)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func deleteProject(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	_, err := db.Pool.Exec(context.Background(),
-		`DELETE FROM projects WHERE id = $1`, id)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
