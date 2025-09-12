@@ -98,6 +98,7 @@ const filteredScenes = computed(() =>
 
 .scene-summary {
   font-size: 0.95rem;
-  color: #555;
+  color: white;
+  font-style: italic;
 }
 </style>

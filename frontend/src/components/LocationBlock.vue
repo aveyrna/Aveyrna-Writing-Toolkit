@@ -1,9 +1,18 @@
 <script setup>
+import LocationCard from './LocationCard.vue'
+
 defineProps({ locations: Array })
 </script>
 
 <template>
   <div class="location-block">
+    <h3 class="locations-title">Lieux ({{ locations.length }})</h3>
+    <div class="scroll-row">
+      <LocationCard v-for="location in locations" :key="location.id" :location="location" />
+    </div>
+  </div>
+</template>
+<!-- <template>
     <h3 class="locations-title">Lieux ({{ locations.length }})</h3>
     <div class="scroll-row">
       <div
@@ -25,10 +34,9 @@ defineProps({ locations: Array })
       </div>
     </div>
   </div>
-</template>
+</template> -->
 
 <style scoped>
-
 .locations-title {
   font-size: 1.3rem;
   font-weight: bold;
