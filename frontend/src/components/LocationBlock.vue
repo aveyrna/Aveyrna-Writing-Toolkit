@@ -12,29 +12,6 @@ defineProps({ locations: Array })
     </div>
   </div>
 </template>
-<!-- <template>
-    <h3 class="locations-title">Lieux ({{ locations.length }})</h3>
-    <div class="scroll-row">
-      <div
-        v-for="location in locations"
-        :key="location.id"
-        class="location-card"
-      >
-        <div class="font-bold">{{ location.name }}</div>
-        <div class="text-sm text-gray-500">
-          {{ location.description || 'Pas de description' }}
-        </div>
-        <div v-if="location.image_url" class="mt-2">
-          <img
-            :src="location.image_url"
-            alt="Image lieu"
-            class="w-full max-w-xs rounded shadow"
-          />
-        </div>
-      </div>
-    </div>
-  </div>
-</template> -->
 
 <style scoped>
 .locations-title {

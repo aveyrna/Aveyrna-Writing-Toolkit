@@ -1,4 +1,6 @@
 <script setup>
+import FactionCard from './FactionCard.vue';
+
 defineProps({ factions: Array })
 </script>
 
@@ -6,22 +8,7 @@ defineProps({ factions: Array })
   <div class="faction-block">
     <h3 class="factions-title">Factions ({{ factions.length }})</h3>
     <div class="scroll-row">
-      <div
-        v-for="faction in factions"
-        :key="faction.id"
-        class="faction-card"
-      >
-        <div class="font-bold">{{ faction.name }}</div>
-        <div class="text-sm text-gray-500 mb-2">
-          {{ faction.description || 'Aucune description spécifiée' }}
-        </div>
-        <div v-if="faction.members?.length" class="text-sm">
-          Membres :
-          <ul class="list-disc ml-5">
-            <li v-for="member in faction.members" :key="member.id">{{ member.name }}</li>
-          </ul>
-        </div>
-      </div>
+      <FactionCard v-for="faction in factions" :key="faction.id" :faction="faction" />
     </div>
   </div>
 </template>
